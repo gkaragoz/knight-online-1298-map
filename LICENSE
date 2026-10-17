@@ -1,0 +1,154 @@
+# Knight Online 1298 Spawn Atlas — License
+
+Required Notice: Copyright (c) 2026 gkaragoz and Contributors (https://github.com/gkaragoz/knight-online-1298-map)
+
+The **viewer application and build tooling** in this repository — the DXT image
+decoder, the SQL parser, the build pipeline and the interactive map viewer
+(`index.html`, `template.html`, `build.py`, `tools/`) — are the original work of
+gkaragoz and Contributors and are licensed under the **PolyForm Noncommercial
+License 1.0.0** (full text below) together with the **Additional Terms** at the
+end of this file.
+
+In short (non-binding summary): you may use, study, modify and share this project
+for **noncommercial** purposes (personal use, hobby, education, research, charities,
+public institutions). You may **not** use it, or anything derived from it, to make
+money or for any commercial purpose without the author's prior written permission.
+
+This is NOT an open-source license in the OSI sense: it restricts commercial use.
+
+> **Game content is not covered by this license.** The Knight Online game data
+> (monster / NPC names, stats, spawn coordinates, item names) and the client
+> minimap images displayed by this tool originate from the game Knight Online and
+> are the property of their respective owners. See the **Third-Party and Game
+> Content** section at the end of this file. gkaragoz's copyright and the license
+> grant above apply only to the original code and tooling, not to that content.
+
+---
+
+# PolyForm Noncommercial License 1.0.0
+
+<https://polyformproject.org/licenses/noncommercial/1.0.0>
+
+## Acceptance
+
+In order to get any license under these terms, you must agree to them as both strict obligations and conditions to all your licenses.
+
+## Copyright License
+
+The licensor grants you a copyright license for the software to do everything you might do with the software that would otherwise infringe the licensor's copyright in it for any permitted purpose.  However, you may only distribute the software according to [Distribution License](#distribution-license) and make changes or new works based on the software according to [Changes and New Works License](#changes-and-new-works-license).
+
+## Distribution License
+
+The licensor grants you an additional copyright license to distribute copies of the software.  Your license to distribute covers distributing the software with changes and new works permitted by [Changes and New Works License](#changes-and-new-works-license).
+
+## Notices
+
+You must ensure that anyone who gets a copy of any part of the software from you also gets a copy of these terms or the URL for them above, as well as copies of any plain-text lines beginning with `Required Notice:` that the licensor provided with the software.  For example:
+
+> Required Notice: Copyright Yoyodyne, Inc. (http://example.com)
+
+## Changes and New Works License
+
+The licensor grants you an additional copyright license to make changes and new works based on the software for any permitted purpose.
+
+## Patent License
+
+The licensor grants you a patent license for the software that covers patent claims the licensor can license, or becomes able to license, that you would infringe by using the software.
+
+## Noncommercial Purposes
+
+Any noncommercial purpose is a permitted purpose.
+
+## Personal Uses
+
+Personal use for research, experiment, and testing for the benefit of public knowledge, personal study, private entertainment, hobby projects, amateur pursuits, or religious observance, without any anticipated commercial application, is use for a permitted purpose.
+
+## Noncommercial Organizations
+
+Use by any charitable organization, educational institution, public research organization, public safety or health organization, environmental protection organization, or government institution is use for a permitted purpose regardless of the source of funding or obligations resulting from the funding.
+
+## Fair Use
+
+You may have "fair use" rights for the software under the law. These terms do not limit them.
+
+## No Other Rights
+
+These terms do not allow you to sublicense or transfer any of your licenses to anyone else, or prevent the licensor from granting licenses to anyone else.  These terms do not imply any other licenses.
+
+## Patent Defense
+
+If you make any written claim that the software infringes or contributes to infringement of any patent, your patent license for the software granted under these terms ends immediately. If your company makes such a claim, your patent license ends immediately for work on behalf of your company.
+
+## Violations
+
+The first time you are notified in writing that you have violated any of these terms, or done anything with the software not covered by your licenses, your licenses can nonetheless continue if you come into full compliance with these terms, and take practical steps to correct past violations, within 32 days of receiving notice.  Otherwise, all your licenses end immediately.
+
+## No Liability
+
+***As far as the law allows, the software comes as is, without any warranty or condition, and the licensor will not be liable to you for any damages arising out of these terms or the use or nature of the software, under any kind of legal claim.***
+
+## Definitions
+
+The **licensor** is the individual or entity offering these terms, and the **software** is the software the licensor makes available under these terms.
+
+**You** refers to the individual or entity agreeing to these terms.
+
+**Your company** is any legal entity, sole proprietorship, or other kind of organization that you work for, plus all organizations that have control over, are under the control of, or are under common control with that organization.  **Control** means ownership of substantially all the assets of an entity, or the power to direct its management and policies by vote, contract, or otherwise.  Control can be direct or indirect.
+
+**Your licenses** are all the licenses granted to you for the software under these terms.
+
+**Use** means anything you do with the software requiring one of your licenses.
+
+---
+
+# Additional Terms
+
+These Additional Terms apply on top of the PolyForm Noncommercial License 1.0.0 above.
+If anything here conflicts with that license, the more restrictive term applies.
+
+1. **Commercial use requires written permission.** Selling the software, offering it
+   (or a modified version) as a paid product or service, including it in a paid
+   product, charging for access to it, monetizing it with advertising, subscriptions,
+   or donations tied to access, is a commercial purpose. To get a commercial license,
+   contact the author through https://github.com/gkaragoz.
+
+2. **Notice preservation.** Every copy or modified version must keep the line
+   "© gkaragoz and Contributors" in a reasonably visible place in the user interface
+   (this project keeps it in the map legend footer), and must keep the
+   `Required Notice:` line above together with a copy of this file.
+
+3. **No misrepresentation.** A modified version must not misrepresent its origin or
+   its relationship to the official project, must be marked as modified, and must not
+   imply endorsement by the author without written permission.
+
+4. **Third-party components.** Third-party libraries and runtimes keep their own
+   licenses. See the **Third-Party and Game Content** section below.
+
+---
+
+# Third-Party and Game Content
+
+This section is important: the license grant above does **not** cover everything this
+repository displays.
+
+- **Knight Online game data** — monster and NPC names, stats, spawn coordinates and
+  item names — and the **client minimap images** (`Zones/*.dxt`, rendered into
+  `index.html`) originate from the MMORPG **Knight Online**. Knight Online and its
+  assets are the property of their respective rights holders (© MGAME Corporation /
+  Noah System; operated by various publishers). They are **not** owned by gkaragoz,
+  are **not** licensed under the terms above, and are included here only to make a
+  **noncommercial, fan-made reference tool**.
+
+- The game data and the minimap assets are sourced from the open community project
+  **Open-KO** (https://github.com/Open-KO), specifically its `OpenKO-db` database
+  seed and `ko-client-assets` (the 1.298 US client assets). Their use is governed by
+  those projects' own terms and, ultimately, by the rights of the Knight Online
+  rights holders.
+
+- This project is an **unofficial fan tool**. It is not affiliated with, endorsed by,
+  or sponsored by the owners or operators of Knight Online. No ownership of the
+  Knight Online name, data or assets is claimed. If you are a rights holder and want
+  content removed, open an issue on the repository.
+
+The `Required Notice:` line and gkaragoz's copyright apply to the original code and
+tooling only.

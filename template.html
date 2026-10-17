@@ -1,0 +1,455 @@
+<title>KO 1298 Spawn Atlas</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one-screen survey table. Left rail = zone, filters, creature index; right = pannable minimap with spawn slots plotted in world units. Phone: map on top, rail below. */
+:root {
+  --bg: #e8edec;
+  --panel: #f5f8f7;
+  --raised: #ffffff;
+  --line: #c4cfcd;
+  --fg: #13201f;
+  --muted: #566866;
+  --accent: #0d6b69;
+  --accent-fg: #ffffff;
+  --map-bg: #cfd8d6;
+  --grid: rgba(10, 30, 28, .28);
+  --grid-label: rgba(10, 30, 28, .72);
+  --lv1: #5fcf8f;
+  --lv2: #e6d34a;
+  --lv3: #f39a2c;
+  --lv4: #e5483b;
+  --lv5: #c53fd4;
+  --npc: #3d9bff;
+  --marker-edge: #0b1413;
+  --font-display: "Barlow Condensed", "Arial Narrow", sans-serif;
+  --font-body: "Barlow", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0d1514; --panel: #142120; --raised: #1b2c2a; --line: #2b3d3a;
+    --fg: #e2ece9; --muted: #8fa5a1; --accent: #4cc7bb; --accent-fg: #06201d;
+    --map-bg: #0a1110; --grid: rgba(220, 245, 240, .22); --grid-label: rgba(220, 245, 240, .75);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0d1514; --panel: #142120; --raised: #1b2c2a; --line: #2b3d3a;
+  --fg: #e2ece9; --muted: #8fa5a1; --accent: #4cc7bb; --accent-fg: #06201d;
+  --map-bg: #0a1110; --grid: rgba(220, 245, 240, .22); --grid-label: rgba(220, 245, 240, .75);
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body {
+  background: var(--bg); color: var(--fg);
+  font-family: var(--font-body); font-size: 14px; line-height: 1.4;
+  padding-block: 12px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  box-sizing: border-box;
+}
+button, input, select { font: inherit; color: inherit; }
+.app { height: 100%; display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+header { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+h1 { margin: 0; font: 700 26px/1 var(--font-display); letter-spacing: .02em; text-transform: uppercase; text-wrap: balance; }
+.src { color: var(--muted); font-size: 12px; }
+.src b { font-family: var(--font-mono); font-weight: 500; color: var(--fg); }
+.main { flex: 1; min-height: 0; display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 12px; }
+.rail { min-height: 0; min-width: 0; display: flex; flex-direction: column; gap: 10px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 12px; }
+.field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.label { font: 600 11px/1 var(--font-display); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+select, input[type=search], input[type=number] {
+  background: var(--raised); border: 1px solid var(--line); border-radius: 4px; padding: 7px 9px; min-width: 0; width: 100%; box-sizing: border-box;
+}
+select:focus-visible, input:focus-visible, button:focus-visible, canvas:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.row { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; }
+.row .field { flex: 1 1 70px; }
+.toggle { flex: 1 1 90px; display: flex; align-items: center; justify-content: center; gap: 7px; padding: 7px 9px; border: 1px solid var(--line); background: var(--raised); border-radius: 4px; cursor: pointer; user-select: none; }
+.toggle[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.toggle[aria-pressed="false"] { color: var(--muted); }
+.swatch { width: 10px; height: 10px; border: 1px solid var(--marker-edge); background: var(--lv3); display: inline-block; }
+.swatch.npc { background: var(--npc); transform: rotate(45deg) scale(.85); }
+.swatch.mon { border-radius: 50%; }
+.stats { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+.stats b { color: var(--fg); font-weight: 500; }
+.detail { background: var(--raised); border: 1px solid var(--line); border-radius: 4px; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+.detail[hidden] { display: none; }
+.dhead { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
+.dname { font: 700 20px/1.1 var(--font-display); letter-spacing: .02em; text-wrap: balance; min-width: 0; overflow-wrap: anywhere; }
+.clear { border: 1px solid var(--line); background: transparent; border-radius: 4px; padding: 3px 8px; cursor: pointer; flex: none; }
+.kv { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; font-family: var(--font-mono); font-size: 12px; }
+.kv div span { display: block; font: 600 10px/1.2 var(--font-display); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.slots { max-height: 140px; overflow: auto; display: flex; flex-direction: column; gap: 2px; font-family: var(--font-mono); font-size: 11.5px; }
+.slot { text-align: left; background: transparent; border: 0; border-radius: 3px; padding: 3px 5px; cursor: pointer; display: flex; justify-content: space-between; gap: 8px; }
+.slot:hover { background: var(--panel); }
+.list { flex: 1; min-height: 120px; overflow: auto; display: flex; flex-direction: column; gap: 2px; margin: 0 -4px; padding: 0 4px; }
+.item { display: grid; grid-template-columns: 14px minmax(0, 1fr) auto; gap: 8px; align-items: center; text-align: left; background: transparent; border: 1px solid transparent; border-radius: 4px; padding: 5px 6px; cursor: pointer; }
+.item:hover { background: var(--raised); }
+.item[aria-pressed="true"] { background: var(--raised); border-color: var(--accent); }
+.item .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.item .lv, .item .ct { font-family: var(--font-mono); font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.item .lv { color: var(--fg); }
+.dot { width: 10px; height: 10px; border: 1px solid var(--marker-edge); border-radius: 50%; }
+.dot.npc { border-radius: 0; transform: rotate(45deg) scale(.8); }
+.empty { color: var(--muted); padding: 14px 6px; }
+.mapwrap { position: relative; min-width: 0; min-height: 0; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: var(--map-bg); }
+canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; }
+canvas.drag { cursor: grabbing; }
+.tools { position: absolute; right: 10px; top: 10px; display: flex; flex-direction: column; gap: 4px; }
+.tools button { width: 34px; height: 34px; background: var(--panel); border: 1px solid var(--line); border-radius: 4px; cursor: pointer; font: 600 18px/1 var(--font-body); }
+.tools button:hover { border-color: var(--accent); }
+.readout { position: absolute; left: 10px; bottom: 10px; padding: 4px 8px; background: var(--panel); border: 1px solid var(--line); border-radius: 4px; font: 12px var(--font-mono); font-variant-numeric: tabular-nums; pointer-events: none; }
+.note { position: absolute; left: 10px; top: 10px; max-width: 60%; padding: 4px 8px; background: var(--panel); border: 1px solid var(--line); border-radius: 4px; font-size: 12px; color: var(--muted); pointer-events: none; }
+.note[hidden] { display: none; }
+.tip { position: absolute; pointer-events: none; z-index: 3; background: var(--raised); color: var(--fg); border: 1px solid var(--line); border-radius: 4px; padding: 6px 9px; font-size: 12px; max-width: 240px; box-shadow: 0 2px 10px rgba(0,0,0,.25); }
+.tip[hidden] { display: none; }
+.tip b { font: 700 15px/1.2 var(--font-display); letter-spacing: .02em; display: block; }
+.tip .m { font-family: var(--font-mono); color: var(--muted); font-size: 11px; }
+.legend { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; font: 11px var(--font-mono); color: var(--muted); }
+.legend i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; border: 1px solid var(--marker-edge); margin-right: 4px; vertical-align: -1px; }
+@media (max-width: 800px) {
+  body { padding-block: 8px; }
+  .main { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(260px, 48%) minmax(0, 1fr); }
+  .mapwrap { order: -1; }
+  h1 { font-size: 22px; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; transition: none !important; } }
+</style>
+
+<div class="app">
+  <header>
+    <h1>KO 1298 Spawn Atlas</h1>
+    <span class="src">Kaynak: Open-KO <b>K_NPCPOS</b> + client <b>Zones/*.dxt</b> minimap'leri</span>
+  </header>
+  <div class="main">
+    <aside class="rail">
+      <div class="field">
+        <label class="label" for="zone">Zone</label>
+        <select id="zone"></select>
+      </div>
+      <div class="field">
+        <label class="label" for="q">Ara</label>
+        <input id="q" type="search" placeholder="Canavar veya NPC adı" autocomplete="off">
+      </div>
+      <div class="row">
+        <div class="field"><label class="label" for="lvmin">Level min</label><input id="lvmin" type="number" min="0" inputmode="numeric" placeholder="0"></div>
+        <div class="field"><label class="label" for="lvmax">Level maks</label><input id="lvmax" type="number" min="0" inputmode="numeric" placeholder="∞"></div>
+      </div>
+      <div class="row">
+        <button class="toggle" id="tmon" aria-pressed="true" type="button"><span class="swatch mon"></span>Canavar</button>
+        <button class="toggle" id="tnpc" aria-pressed="true" type="button"><span class="swatch npc"></span>NPC</button>
+      </div>
+      <div class="stats" id="stats"></div>
+      <div class="detail" id="detail" hidden></div>
+      <div class="list" id="list" role="list"></div>
+    </aside>
+    <div class="mapwrap" id="mapwrap">
+      <canvas id="cv" tabindex="0" aria-label="Zone haritası"></canvas>
+      <div class="note" id="note" hidden></div>
+      <div class="tools">
+        <button id="zin" type="button" aria-label="Yakınlaştır">+</button>
+        <button id="zout" type="button" aria-label="Uzaklaştır">&minus;</button>
+        <button id="zfit" type="button" aria-label="Sığdır">&#9635;</button>
+      </div>
+      <div class="readout" id="readout">X &ndash;  Z &ndash;</div>
+      <div class="tip" id="tip" hidden></div>
+    </div>
+  </div>
+  <div class="legend" id="legend">
+    <span><i style="background:var(--lv1)"></i>Lv 1&ndash;20</span>
+    <span><i style="background:var(--lv2)"></i>21&ndash;40</span>
+    <span><i style="background:var(--lv3)"></i>41&ndash;60</span>
+    <span><i style="background:var(--lv4)"></i>61&ndash;70</span>
+    <span><i style="background:var(--lv5)"></i>71+</span>
+    <span><i style="background:var(--npc);border-radius:0;transform:rotate(45deg) scale(.8)"></i>NPC</span>
+    <span>Koordinatlar oyun birimi (X doğu, Z kuzey). Dikdörtgen = spawn slotunun alanı.</span>
+    <span style="margin-inline-start:auto"><a href="https://github.com/gkaragoz/knight-online-1298-map" target="_blank" rel="noopener" style="color:var(--muted);text-decoration:none">&copy; gkaragoz &amp; Contributors &middot; PolyForm NC</a></span>
+  </div>
+</div>
+
+<script>/*__DATA__*/</script>
+<script>
+(function () {
+  var D = window.__DATA__;
+  var $ = function (id) { return document.getElementById(id); };
+  var cv = $('cv'), ctx = cv.getContext('2d'), wrap = $('mapwrap'), tip = $('tip');
+  var zoneById = {}; D.zones.forEach(function (z) { zoneById[z.id] = z; });
+  var imgCache = {};
+  Object.keys(D.npcs).forEach(function (k) { D.npcs[k][8] = D.npcs[k][0].toLowerCase(); });
+  var S = { zone: null, sel: null, q: '', lvmin: null, lvmax: null, mon: true, npc: true };
+  var V = { s: 1, ox: 0, oy: 0, w: 0, h: 0, dpr: 1 };
+  var hits = [];
+
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function band(l) { return l <= 20 ? 1 : l <= 40 ? 2 : l <= 60 ? 3 : l <= 70 ? 4 : 5; }
+  var TC = {};
+  function css(n) { var v = TC[n]; if (v === undefined) v = TC[n] = getComputedStyle(document.documentElement).getPropertyValue(n).trim(); return v; }
+  function themeChanged() { TC = {}; buildList(); draw(); }
+  function fmt(n) { return n >= 10000 ? (n / 1000).toFixed(n >= 100000 ? 0 : 1) + 'k' : String(n); }
+  function colorOf(info) { return info[6] ? css('--npc') : css('--lv' + band(info[1])); }
+
+  // ---------- data helpers ----------
+  function rows() { return D.spawns[S.zone.id] || []; }
+  function passes(r) {
+    var info = D.npcs[r[0]];
+    if (info[6] ? !S.npc : !S.mon) return false;
+    if (S.lvmin != null && info[1] < S.lvmin) return false;
+    if (S.lvmax != null && info[1] > S.lvmax) return false;
+    if (S.q && info[8].indexOf(S.q) < 0) return false;
+    return true;
+  }
+
+  // ---------- rail ----------
+  function buildList() {
+    var agg = {};
+    rows().forEach(function (r) {
+      if (!passes(r)) return;
+      var a = agg[r[0]] || (agg[r[0]] = { key: r[0], slots: 0, total: 0 });
+      a.slots++; a.total += r[5];
+    });
+    var arr = Object.keys(agg).map(function (k) { return agg[k]; });
+    arr.sort(function (a, b) { var A = D.npcs[a.key], B = D.npcs[b.key]; return (A[6] - B[6]) || (A[1] - B[1]) || A[0].localeCompare(B[0]); });
+    var slots = 0, total = 0; arr.forEach(function (a) { slots += a.slots; total += a.total; });
+    $('stats').innerHTML = '<b>' + arr.length + '</b> tür &middot; <b>' + slots + '</b> slot &middot; <b>' + total + '</b> spawn';
+    var el = $('list');
+    if (!arr.length) { el.innerHTML = '<div class="empty">Bu filtrelerle sonuç yok.' + (S.zone && !rows().some(function (r) { return !D.npcs[r[0]][6]; }) ? ' Bu zone\'da canavar slotu yok, NPC\'leri açmayı dene.' : '') + '</div>'; return; }
+    el.innerHTML = arr.map(function (a) {
+      var i = D.npcs[a.key];
+      return '<button type="button" class="item" role="listitem" data-k="' + a.key + '" aria-pressed="' + (S.sel === a.key) + '">' +
+        '<span class="dot' + (i[6] ? ' npc' : '') + '" style="background:' + colorOf(i) + '"></span>' +
+        '<span class="nm">' + esc(i[0]) + '</span>' +
+        '<span><span class="lv">Lv ' + i[1] + '</span> <span class="ct">&times;' + a.total + '</span></span></button>';
+    }).join('');
+  }
+  function buildDetail() {
+    var el = $('detail');
+    if (!S.sel) { el.hidden = true; return; }
+    var i = D.npcs[S.sel], rs = rows().filter(function (r) { return r[0] === S.sel; });
+    var regs = rs.map(function (r) { return r[6]; }), rmin = Math.min.apply(null, regs), rmax = Math.max.apply(null, regs);
+    var total = rs.reduce(function (t, r) { return t + r[5]; }, 0);
+    el.hidden = false;
+    el.innerHTML =
+      '<div class="dhead"><div class="dname">' + esc(i[0]) + '</div><button class="clear" id="clr" type="button">Temizle</button></div>' +
+      '<div class="kv">' +
+        '<div><span>Level</span>' + i[1] + '</div><div><span>HP</span>' + fmt(i[2]) + '</div>' +
+        '<div><span>EXP</span>' + fmt(i[3]) + '</div><div><span>AC</span>' + i[4] + '</div>' +
+        '<div><span>ATK</span>' + i[5] + '</div><div><span>Arama</span>' + i[7] + '</div>' +
+        '<div><span>Slot</span>' + rs.length + '</div><div><span>Adet</span>' + total + '</div>' +
+      '</div>' +
+      '<div class="stats">Respawn <b>' + (rmin === rmax ? rmin : rmin + '&ndash;' + rmax) + ' sn</b></div>' +
+      '<div class="slots">' + rs.map(function (r, n) {
+        return '<button type="button" class="slot" data-s="' + n + '"><span>X ' + r[1] + (r[3] !== r[1] ? '&ndash;' + r[3] : '') + ' &middot; Z ' + r[2] + (r[4] !== r[2] ? '&ndash;' + r[4] : '') + '</span><span>&times;' + r[5] + ' &middot; ' + r[6] + 'sn</span></button>';
+      }).join('') + '</div>';
+  }
+
+  // ---------- view ----------
+  function size() { return S.zone.size; }
+  function fit(rect) {
+    var sz = size(), pad = 24;
+    var x0 = 0, z0 = 0, x1 = sz, z1 = sz;
+    if (rect) { x0 = rect[0]; z0 = rect[1]; x1 = rect[2]; z1 = rect[3]; }
+    var w = Math.max(x1 - x0, 24), h = Math.max(z1 - z0, 24);
+    var s = Math.min((V.w - pad * 2) / w, (V.h - pad * 2) / h);
+    V.s = Math.min(s, 16);
+    V.ox = V.w / 2 - ((x0 + x1) / 2) * V.s;
+    V.oy = V.h / 2 - (sz - (z0 + z1) / 2) * V.s;
+  }
+  function minScale() { return Math.min(V.w, V.h) / size() * 0.5; }
+  function zoomAt(f, px, py) {
+    var s = Math.max(minScale(), Math.min(16, V.s * f)); f = s / V.s;
+    V.ox = px - (px - V.ox) * f; V.oy = py - (py - V.oy) * f; V.s = s; draw();
+  }
+  function toWorld(px, py) { return [(px - V.ox) / V.s, size() - (py - V.oy) / V.s]; }
+  function resize() {
+    var r = wrap.getBoundingClientRect(); V.dpr = window.devicePixelRatio || 1;
+    var firstFit = !V.w; V.w = Math.max(1, r.width); V.h = Math.max(1, r.height);
+    cv.width = Math.round(V.w * V.dpr); cv.height = Math.round(V.h * V.dpr);
+    if (firstFit && S.zone) fit(); draw();
+  }
+
+  // ---------- draw ----------
+  var raf = 0, idleT = 0, moving = false;
+  function draw() {
+    moving = true; clearTimeout(idleT);
+    idleT = setTimeout(function () { moving = false; if (!raf) raf = requestAnimationFrame(function () { raf = 0; drawNow(); }); }, 150);
+    if (raf) return;
+    raf = requestAnimationFrame(function () { raf = 0; drawNow(); });
+  }
+  function drawNow() {
+    if (!S.zone) return;
+    var sz = size(), s = V.s;
+    ctx.setTransform(V.dpr, 0, 0, V.dpr, 0, 0);
+    ctx.fillStyle = css('--map-bg'); ctx.fillRect(0, 0, V.w, V.h);
+    var img = S.zone.img ? imgCache[S.zone.img] : null, px = sz * s;
+    if (img && img.complete) {
+      ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = moving ? 'low' : 'high';
+      var dx0 = Math.max(0, V.ox), dy0 = Math.max(0, V.oy), dx1 = Math.min(V.w, V.ox + px), dy1 = Math.min(V.h, V.oy + px);
+      if (dx1 > dx0 && dy1 > dy0) {
+        var k = img.naturalWidth / px;
+        ctx.drawImage(img, (dx0 - V.ox) * k, (dy0 - V.oy) * k, (dx1 - dx0) * k, (dy1 - dy0) * k, dx0, dy0, dx1 - dx0, dy1 - dy0);
+      }
+    }
+    else if (!S.zone.img) { ctx.fillStyle = css('--raised'); ctx.fillRect(V.ox, V.oy, px, px); }
+    // grid
+    var steps = [10, 25, 50, 100, 200, 250, 500], step = steps[steps.length - 1];
+    for (var k = 0; k < steps.length; k++) if (steps[k] * s >= 70) { step = steps[k]; break; }
+    ctx.lineWidth = 1; ctx.strokeStyle = css('--grid'); ctx.fillStyle = css('--grid-label');
+    ctx.font = '10px ' + css('--font-mono'); ctx.beginPath();
+    for (var g = 0; g <= sz; g += step) {
+      var gx = Math.round(V.ox + g * s) + .5, gy = Math.round(V.oy + (sz - g) * s) + .5;
+      ctx.moveTo(gx, V.oy); ctx.lineTo(gx, V.oy + px); ctx.moveTo(V.ox, gy); ctx.lineTo(V.ox + px, gy);
+    }
+    ctx.stroke();
+    for (var g2 = 0; g2 <= sz; g2 += step) {
+      var tx = V.ox + g2 * s, ty = V.oy + (sz - g2) * s;
+      if (tx > 2 && tx < V.w - 20) ctx.fillText(g2, tx + 3, Math.max(11, V.oy + 11));
+      if (ty > 14 && ty < V.h - 2) ctx.fillText(g2, Math.max(3, V.ox + 3), ty - 3);
+    }
+    ctx.strokeStyle = css('--fg'); ctx.strokeRect(V.ox + .5, V.oy + .5, px, px);
+    // spawns
+    hits = [];
+    var edge = css('--marker-edge'), list = rows();
+    for (var pass = 0; pass < 2; pass++) {
+      for (var n = 0; n < list.length; n++) {
+        var r = list[n]; if (!passes(r)) continue;
+        var isSel = S.sel === r[0];
+        if ((pass === 1) !== isSel) continue;           // selected slots drawn last
+        var info = D.npcs[r[0]], col = colorOf(info), dim = S.sel && !isSel;
+        var sx0 = V.ox + r[1] * s, sx1 = V.ox + r[3] * s, sy0 = V.oy + (sz - r[4]) * s, sy1 = V.oy + (sz - r[2]) * s;
+        if (sx1 < -20 || sy1 < -20 || sx0 > V.w + 20 || sy0 > V.h + 20) continue;
+        ctx.globalAlpha = dim ? .22 : 1;
+        if (sx1 - sx0 > 5 || sy1 - sy0 > 5) {
+          ctx.fillStyle = col; ctx.globalAlpha = dim ? .06 : .2; ctx.fillRect(sx0, sy0, sx1 - sx0, sy1 - sy0);
+          ctx.globalAlpha = dim ? .22 : .9; ctx.strokeStyle = col; ctx.lineWidth = 1.5; ctx.strokeRect(sx0 + .5, sy0 + .5, sx1 - sx0, sy1 - sy0);
+        }
+        var cx = (sx0 + sx1) / 2, cy = (sy0 + sy1) / 2, rad = isSel ? 7 : 5;
+        ctx.globalAlpha = dim ? .3 : 1; ctx.fillStyle = col; ctx.strokeStyle = edge; ctx.lineWidth = isSel ? 2 : 1.25;
+        ctx.beginPath();
+        if (info[6]) { ctx.moveTo(cx, cy - rad - 1); ctx.lineTo(cx + rad + 1, cy); ctx.lineTo(cx, cy + rad + 1); ctx.lineTo(cx - rad - 1, cy); ctx.closePath(); }
+        else ctx.arc(cx, cy, rad, 0, 6.2832);
+        ctx.fill(); ctx.stroke();
+        ctx.globalAlpha = 1;
+        hits.push({ x: cx, y: cy, r: rad + 5, row: r });
+      }
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // ---------- zone / selection ----------
+  function loadImg(key, cb) {
+    if (!key) return cb();
+    if (imgCache[key]) return cb();
+    var im = new Image(); imgCache[key] = im; im.onload = cb; im.src = D.images[key];
+  }
+  function setZone(id, keepFilters) {
+    S.zone = zoneById[id]; S.sel = null;
+    $('zone').value = String(id);
+    if (!keepFilters) { S.q = ''; S.lvmin = S.lvmax = null; $('q').value = ''; $('lvmin').value = ''; $('lvmax').value = ''; }
+    $('note').hidden = !!S.zone.img;
+    if (!S.zone.img) $('note').textContent = 'Bu zone için client minimap\'i yok, düz ızgara gösteriliyor.';
+    buildList(); buildDetail(); tip.hidden = true;
+    loadImg(S.zone.img, function () { fit(); draw(); });
+    fit(); draw();
+  }
+  function select(key) {
+    S.sel = (S.sel === key) ? null : key;
+    buildList(); buildDetail();
+    if (S.sel) {
+      var rs = rows().filter(function (r) { return r[0] === S.sel; });
+      var b = rs.reduce(function (a, r) { return [Math.min(a[0], r[1]), Math.min(a[1], r[2]), Math.max(a[2], r[3]), Math.max(a[3], r[4])]; }, [1e9, 1e9, -1, -1]);
+      fit(b);
+      var it = $('list').querySelector('.item[aria-pressed="true"]'); if (it) it.scrollIntoView({ block: 'nearest' });
+    }
+    draw();
+  }
+  function refilter() { buildList(); if (S.sel && !rows().some(function (r) { return r[0] === S.sel && passes(r); })) { S.sel = null; buildDetail(); } draw(); }
+
+  // ---------- events ----------
+  D.zones.forEach(function (z) { var o = document.createElement('option'); o.value = z.id; o.textContent = z.name + '  (zone ' + z.id + ' · ' + (D.spawns[z.id] || []).length + ' slot)'; $('zone').appendChild(o); });
+  $('zone').addEventListener('change', function (e) { setZone(+e.target.value); });
+  $('q').addEventListener('input', function (e) { S.q = e.target.value.trim().toLowerCase(); refilter(); });
+  function numOrNull(v) { v = parseInt(v, 10); return isNaN(v) ? null : v; }
+  $('lvmin').addEventListener('input', function (e) { S.lvmin = numOrNull(e.target.value); refilter(); });
+  $('lvmax').addEventListener('input', function (e) { S.lvmax = numOrNull(e.target.value); refilter(); });
+  [['tmon', 'mon'], ['tnpc', 'npc']].forEach(function (p) {
+    $(p[0]).addEventListener('click', function () { S[p[1]] = !S[p[1]]; this.setAttribute('aria-pressed', S[p[1]]); refilter(); });
+  });
+  $('list').addEventListener('click', function (e) { var b = e.target.closest('.item'); if (b) select(b.getAttribute('data-k')); });
+  $('detail').addEventListener('click', function (e) {
+    if (e.target.id === 'clr') { select(S.sel); return; }
+    var b = e.target.closest('.slot'); if (!b) return;
+    var rs = rows().filter(function (r) { return r[0] === S.sel; }), r = rs[+b.getAttribute('data-s')];
+    fit([r[1] - 30, r[2] - 30, r[3] + 30, r[4] + 30]); draw();
+  });
+  $('zin').addEventListener('click', function () { zoomAt(1.5, V.w / 2, V.h / 2); });
+  $('zout').addEventListener('click', function () { zoomAt(1 / 1.5, V.w / 2, V.h / 2); });
+  $('zfit').addEventListener('click', function () { fit(); draw(); });
+
+  var ptrs = {}, moved = 0, pinch0 = 0;
+  function pos(e) { var r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; }
+  cv.addEventListener('wheel', function (e) { e.preventDefault(); var p = pos(e); zoomAt(Math.exp(-e.deltaY * 0.0015), p[0], p[1]); }, { passive: false });
+  cv.addEventListener('pointerdown', function (e) {
+    cv.setPointerCapture(e.pointerId); var p = pos(e); ptrs[e.pointerId] = p; moved = 0; cv.classList.add('drag'); tip.hidden = true;
+    var ids = Object.keys(ptrs); if (ids.length === 2) { var a = ptrs[ids[0]], b = ptrs[ids[1]]; pinch0 = Math.hypot(a[0] - b[0], a[1] - b[1]); }
+  });
+  cv.addEventListener('pointermove', function (e) {
+    var p = pos(e), w = toWorld(p[0], p[1]);
+    $('readout').innerHTML = 'X ' + Math.round(w[0]) + ' &nbsp;Z ' + Math.round(w[1]);
+    var ids = Object.keys(ptrs);
+    if (ptrs[e.pointerId]) {
+      var prev = ptrs[e.pointerId]; ptrs[e.pointerId] = p;
+      if (ids.length === 2) {
+        var a = ptrs[ids[0]], b = ptrs[ids[1]], d = Math.hypot(a[0] - b[0], a[1] - b[1]);
+        if (pinch0) zoomAt(d / pinch0, (a[0] + b[0]) / 2, (a[1] + b[1]) / 2); pinch0 = d; moved = 99;
+      } else {
+        var dx = p[0] - prev[0], dy = p[1] - prev[1]; moved += Math.abs(dx) + Math.abs(dy); V.ox += dx; V.oy += dy; draw();
+      }
+      return;
+    }
+    hover(p);
+  });
+  function endPtr(e) { delete ptrs[e.pointerId]; pinch0 = 0; cv.classList.remove('drag'); }
+  cv.addEventListener('pointerup', function (e) {
+    var p = pos(e), was = moved < 5 && Object.keys(ptrs).length === 1; endPtr(e);
+    if (was) { var h = nearest(p); if (h) select(h.row[0]); }
+  });
+  cv.addEventListener('pointercancel', endPtr);
+  cv.addEventListener('pointerleave', function () { tip.hidden = true; });
+  cv.addEventListener('keydown', function (e) {
+    var k = e.key, st = 40;
+    if (k === '+' || k === '=') zoomAt(1.4, V.w / 2, V.h / 2);
+    else if (k === '-') zoomAt(1 / 1.4, V.w / 2, V.h / 2);
+    else if (k === 'ArrowLeft') { V.ox += st; draw(); } else if (k === 'ArrowRight') { V.ox -= st; draw(); }
+    else if (k === 'ArrowUp') { V.oy += st; draw(); } else if (k === 'ArrowDown') { V.oy -= st; draw(); }
+    else if (k === '0') { fit(); draw(); } else return;
+    e.preventDefault();
+  });
+  function nearest(p) {
+    var best = null, bd = 1e9;
+    for (var i = hits.length - 1; i >= 0; i--) { var h = hits[i], d = Math.hypot(h.x - p[0], h.y - p[1]); if (d <= h.r && d < bd) { bd = d; best = h; } }
+    return best;
+  }
+  var lastRow = null;
+  function hover(p) {
+    var h = nearest(p);
+    if (!h) { tip.hidden = true; lastRow = null; cv.style.cursor = ''; return; }
+    var r = h.row, i = D.npcs[r[0]]; cv.style.cursor = 'pointer';
+    if (r !== lastRow) tip.innerHTML = '<b>' + esc(i[0]) + '</b><div class="m">' + (i[6] ? 'NPC' : 'Canavar') + ' &middot; Lv ' + i[1] + ' &middot; HP ' + fmt(i[2]) + '</div>' +
+      '<div class="m">X ' + r[1] + (r[3] !== r[1] ? '&ndash;' + r[3] : '') + ' &middot; Z ' + r[2] + (r[4] !== r[2] ? '&ndash;' + r[4] : '') + '</div>' +
+      '<div class="m">adet &times;' + r[5] + ' &middot; respawn ' + r[6] + ' sn</div>';
+    lastRow = r; tip.hidden = false;
+    var tw = tip.offsetWidth, th = tip.offsetHeight, x = h.x + 14, y = h.y + 14;
+    if (x + tw > V.w - 4) x = h.x - tw - 14; if (y + th > V.h - 4) y = h.y - th - 14;
+    tip.style.left = Math.max(4, x) + 'px'; tip.style.top = Math.max(4, y) + 'px';
+  }
+
+  new ResizeObserver(resize).observe(wrap);
+  var mq = window.matchMedia('(prefers-color-scheme: dark)');
+  if (mq.addEventListener) mq.addEventListener('change', themeChanged);
+  new MutationObserver(themeChanged).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+  var start = D.zones.filter(function (z) { return z.id === 1; })[0] || D.zones[0];
+  resize(); setZone(start.id);
+})();
+</script>

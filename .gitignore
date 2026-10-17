@@ -1,0 +1,6 @@
+# generated / local build artifacts
+data/
+.venv/
+__pycache__/
+*.pyc
+shots/
