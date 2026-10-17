@@ -1,0 +1,27 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Package standalone map
+        run: cp index.html ko-1298-spawn-atlas.html
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            ko-1298-spawn-atlas.html \
+            --title "${GITHUB_REF_NAME}" \
+            --notes "Standalone, offline-capable monster & NPC spawn atlas for Knight Online 1.298.
+
+          Download **ko-1298-spawn-atlas.html** and open it in any browser, or use the live map:
+          https://gkaragoz.github.io/knight-online-1298-map/"
